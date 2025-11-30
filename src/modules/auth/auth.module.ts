@@ -20,7 +20,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
     JwtModule.registerAsync({
       useFactory: async () => ({
         secret: appConfig().jwt.secret,
-        signOptions: { expiresIn: appConfig().jwt.expiry },
+        signOptions: { expiresIn: +appConfig().jwt.expiry },
       }),
     }),
     PrismaModule,
