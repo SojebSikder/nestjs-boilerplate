@@ -1,18 +1,22 @@
-import * as crypto from 'crypto';
-import { randomInt } from 'crypto';
+import { randomInt, randomBytes } from 'crypto';
 import { v4 as uuid } from 'uuid';
-import { PrismaClient } from '@prisma/client';
 import { DateHelper } from '../../helper/date.helper';
 import { UserRepository } from '../user/user.repository';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { Injectable } from '@nestjs/common';
 
-const prisma = new PrismaClient();
-
+@Injectable()
 export class UcodeRepository {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly userRepository: UserRepository,
+  ) {}
+
   /**
    * create ucode token
    * @returns
    */
-  static async createToken({
+  async createToken({
     userId,
     expired_at = null,
     isOtp = false,
@@ -22,7 +26,7 @@ export class UcodeRepository {
     const otpExpiryTime = 5 * 60 * 1000;
     expired_at = new Date(Date.now() + otpExpiryTime);
 
-    const userDetails = await UserRepository.getUserDetails(userId);
+    const userDetails = await this.userRepository.getUserDetails(userId);
     if (userDetails && userDetails.email) {
       let token: string;
       if (isOtp) {
@@ -32,7 +36,7 @@ export class UcodeRepository {
       } else {
         token = uuid();
       }
-      const data = await prisma.ucode.create({
+      const data = await this.prisma.ucode.create({
         data: {
           user_id: userId,
           token: token,
@@ -50,7 +54,7 @@ export class UcodeRepository {
    * validate ucode token
    * @returns
    */
-  static async validateToken({
+  async validateToken({
     email,
     token,
     forEmailChange = false,
@@ -59,7 +63,7 @@ export class UcodeRepository {
     token: string;
     forEmailChange?: boolean;
   }) {
-    const userDetails = await UserRepository.exist({
+    const userDetails = await this.userRepository.exist({
       field: 'email',
       value: email,
     });
@@ -75,7 +79,7 @@ export class UcodeRepository {
 
     if (proceedNext) {
       const date = DateHelper.now().toISOString();
-      const existToken = await prisma.ucode.findFirst({
+      const existToken = await this.prisma.ucode.findFirst({
         where: {
           AND: {
             token: token,
@@ -86,7 +90,7 @@ export class UcodeRepository {
 
       if (existToken) {
         if (existToken.expired_at) {
-          const data = await prisma.ucode.findFirst({
+          const data = await this.prisma.ucode.findFirst({
             where: {
               AND: [
                 {
@@ -116,7 +120,7 @@ export class UcodeRepository {
           }
         } else {
           // delete this token
-          await prisma.ucode.delete({
+          await this.prisma.ucode.delete({
             where: {
               id: existToken.id,
             },
@@ -133,22 +137,19 @@ export class UcodeRepository {
    * delete ucode token
    * @returns
    */
-  static async deleteToken({ email, token }) {
-    await prisma.ucode.deleteMany({
+  async deleteToken({ email, token }) {
+    await this.prisma.ucode.deleteMany({
       where: {
         AND: [{ email: email }, { token: token }],
       },
     });
   }
 
-  static async createVerificationToken(params: {
-    userId: string;
-    email: string;
-  }) {
+  async createVerificationToken(params: { userId: string; email: string }) {
     try {
-      const token = crypto.randomBytes(32).toString('hex');
+      const token = randomBytes(32).toString('hex');
 
-      const ucode = await prisma.ucode.create({
+      const ucode = await this.prisma.ucode.create({
         data: {
           user_id: params.userId,
           email: params.email,

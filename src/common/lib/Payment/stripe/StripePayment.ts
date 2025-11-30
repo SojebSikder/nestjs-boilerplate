@@ -2,6 +2,8 @@ import stripe from 'stripe';
 import * as fs from 'fs';
 import appConfig from '../../../../config/app.config';
 import { Fetch } from '../../Fetch';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 const STRIPE_SECRET_KEY = appConfig().payment.stripe.secret_key;
 

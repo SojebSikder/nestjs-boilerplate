@@ -9,12 +9,12 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { OnModuleInit } from '@nestjs/common';
-import { MessageStatus } from '@prisma/client';
 import * as jwt from 'jsonwebtoken';
 import * as path from 'path';
 import * as fs from 'fs';
 import appConfig from '../../../config/app.config';
 import { ChatRepository } from '../../../common/repository/chat/chat.repository';
+import { MessageStatus } from 'prisma/generated/enums';
 
 @WebSocketGateway({
   cors: {
@@ -39,7 +39,7 @@ export class MessageGateway
     '../../../../public/storage/recordings',
   );
 
-  constructor() {
+  constructor(private readonly chatRepository: ChatRepository) {
     if (!fs.existsSync(this.uploadsDir)) {
       fs.mkdirSync(this.uploadsDir, { recursive: true });
     }
@@ -78,7 +78,7 @@ export class MessageGateway
 
       this.clients.set(userId, client.id);
       // console.log(`User ${userId} connected with socket ${client.id}`);
-      await ChatRepository.updateUserStatus(userId, 'online');
+      await this.chatRepository.updateUserStatus(userId, 'online');
       // notify the user that the user is online
       this.server.emit('userStatusChange', {
         user_id: userId,
@@ -106,7 +106,7 @@ export class MessageGateway
         this.activeUsers.delete(username);
       }
 
-      await ChatRepository.updateUserStatus(userId, 'offline');
+      await this.chatRepository.updateUserStatus(userId, 'offline');
       // notify the user that the user is offline
       this.server.emit('userStatusChange', {
         user_id: userId,
@@ -144,7 +144,7 @@ export class MessageGateway
     client: Socket,
     @MessageBody() body: { message_id: string; status: MessageStatus },
   ) {
-    await ChatRepository.updateMessageStatus(body.message_id, body.status);
+    await this.chatRepository.updateMessageStatus(body.message_id, body.status);
     // notify the sender that the message has been sent
     this.server.emit('messageStatusUpdated', {
       message_id: body.message_id,

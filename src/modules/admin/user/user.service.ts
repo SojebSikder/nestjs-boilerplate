@@ -9,11 +9,14 @@ import { DateHelper } from '../../../common/helper/date.helper';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private userRepository: UserRepository,
+  ) {}
 
   async create(createUserDto: CreateUserDto) {
     try {
-      const user = await UserRepository.createUser(createUserDto);
+      const user = await this.userRepository.createUser(createUserDto);
 
       if (user.success) {
         return {
@@ -192,7 +195,7 @@ export class UserService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
-      const user = await UserRepository.updateUser(id, updateUserDto);
+      const user = await this.userRepository.updateUser(id, updateUserDto);
 
       if (user.success) {
         return {
@@ -215,7 +218,7 @@ export class UserService {
 
   async remove(id: string) {
     try {
-      const user = await UserRepository.deleteUser(id);
+      const user = await this.userRepository.deleteUser(id);
       return user;
     } catch (error) {
       return {

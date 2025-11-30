@@ -5,7 +5,10 @@ import { TransactionRepository } from '../../../common/repository/transaction/tr
 
 @Controller('payment/stripe')
 export class StripeController {
-  constructor(private readonly stripeService: StripeService) {}
+  constructor(
+    private readonly stripeService: StripeService,
+    private transactionRepository: TransactionRepository,
+  ) {}
 
   @Post('webhook')
   async handleWebhook(
@@ -29,7 +32,7 @@ export class StripeController {
           //   paymentIntent.metadata['tax_calculation'],
           // );
           // Update transaction status in database
-          await TransactionRepository.updateTransaction({
+          await this.transactionRepository.updateTransaction({
             reference_number: paymentIntent.id,
             status: 'succeeded',
             paid_amount: paymentIntent.amount / 100, // amount in dollars
@@ -40,7 +43,7 @@ export class StripeController {
         case 'payment_intent.payment_failed':
           const failedPaymentIntent = event.data.object;
           // Update transaction status in database
-          await TransactionRepository.updateTransaction({
+          await this.transactionRepository.updateTransaction({
             reference_number: failedPaymentIntent.id,
             status: 'failed',
             raw_status: failedPaymentIntent.status,
@@ -48,7 +51,7 @@ export class StripeController {
         case 'payment_intent.canceled':
           const canceledPaymentIntent = event.data.object;
           // Update transaction status in database
-          await TransactionRepository.updateTransaction({
+          await this.transactionRepository.updateTransaction({
             reference_number: canceledPaymentIntent.id,
             status: 'canceled',
             raw_status: canceledPaymentIntent.status,
@@ -57,7 +60,7 @@ export class StripeController {
         case 'payment_intent.requires_action':
           const requireActionPaymentIntent = event.data.object;
           // Update transaction status in database
-          await TransactionRepository.updateTransaction({
+          await this.transactionRepository.updateTransaction({
             reference_number: requireActionPaymentIntent.id,
             status: 'requires_action',
             raw_status: requireActionPaymentIntent.status,

@@ -8,8 +8,8 @@ import Redis from 'ioredis';
 import appConfig from '../../config/app.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserRepository } from '../../common/repository/user/user.repository';
-import { MailService } from '../../mail/mail.service';
 import { UcodeRepository } from '../../common/repository/ucode/ucode.repository';
+import { MailService } from '../../mail/mail.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SojebStorage } from '../../common/lib/Disk/SojebStorage';
 import { DateHelper } from '../../common/helper/date.helper';
@@ -22,6 +22,8 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private mailService: MailService,
+    private userRepository: UserRepository,
+    private ucodeRepository: UcodeRepository,
     @InjectRedis() private readonly redis: Redis,
   ) {}
 
@@ -141,7 +143,7 @@ export class AuthService {
 
         data.avatar = fileName;
       }
-      const user = await UserRepository.getUserDetails(userId);
+      const user = await this.userRepository.getUserDetails(userId);
       if (user) {
         await this.prisma.user.update({
           where: { id: userId },
@@ -181,7 +183,7 @@ export class AuthService {
     });
 
     if (user) {
-      const _isValidPassword = await UserRepository.validatePassword({
+      const _isValidPassword = await this.userRepository.validatePassword({
         email: email,
         password: _password,
       });
@@ -189,7 +191,7 @@ export class AuthService {
         const { password, ...result } = user;
         if (user.is_two_factor_enabled) {
           if (token) {
-            const isValid = await UserRepository.verify2FA(user.id, token);
+            const isValid = await this.userRepository.verify2FA(user.id, token);
             if (!isValid) {
               throw new UnauthorizedException('Invalid token');
               // return {
@@ -229,7 +231,7 @@ export class AuthService {
       const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
       const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
-      const user = await UserRepository.getUserDetails(userId);
+      const user = await this.userRepository.getUserDetails(userId);
 
       // store refreshToken
       await this.redis.set(
@@ -275,7 +277,7 @@ export class AuthService {
         };
       }
 
-      const userDetails = await UserRepository.getUserDetails(user_id);
+      const userDetails = await this.userRepository.getUserDetails(user_id);
       if (!userDetails) {
         return {
           success: false,
@@ -342,7 +344,7 @@ export class AuthService {
   }) {
     try {
       // Check if email already exist
-      const userEmailExist = await UserRepository.exist({
+      const userEmailExist = await this.userRepository.exist({
         field: 'email',
         value: String(email),
       });
@@ -354,7 +356,7 @@ export class AuthService {
         };
       }
 
-      const user = await UserRepository.createUser({
+      const user = await this.userRepository.createUser({
         name: name,
         first_name: first_name,
         last_name: last_name,
@@ -390,7 +392,7 @@ export class AuthService {
 
       // ----------------------------------------------------
       // // create otp code
-      // const token = await UcodeRepository.createToken({
+      // const token = await this.ucodeRepository.createToken({
       //   userId: user.data.id,
       //   isOtp: true,
       // });
@@ -410,7 +412,7 @@ export class AuthService {
       // ----------------------------------------------------
 
       // Generate verification token
-      const token = await UcodeRepository.createVerificationToken({
+      const token = await this.ucodeRepository.createVerificationToken({
         userId: user.data.id,
         email: email,
       });
@@ -437,13 +439,13 @@ export class AuthService {
 
   async forgotPassword(email) {
     try {
-      const user = await UserRepository.exist({
+      const user = await this.userRepository.exist({
         field: 'email',
         value: email,
       });
 
       if (user) {
-        const token = await UcodeRepository.createToken({
+        const token = await this.ucodeRepository.createToken({
           userId: user.id,
           isOtp: true,
         });
@@ -474,25 +476,25 @@ export class AuthService {
 
   async resetPassword({ email, token, password }) {
     try {
-      const user = await UserRepository.exist({
+      const user = await this.userRepository.exist({
         field: 'email',
         value: email,
       });
 
       if (user) {
-        const existToken = await UcodeRepository.validateToken({
+        const existToken = await this.ucodeRepository.validateToken({
           email: email,
           token: token,
         });
 
         if (existToken) {
-          await UserRepository.changePassword({
+          await this.userRepository.changePassword({
             email: email,
             password: password,
           });
 
           // delete otp code
-          await UcodeRepository.deleteToken({
+          await this.ucodeRepository.deleteToken({
             email: email,
             token: token,
           });
@@ -523,13 +525,13 @@ export class AuthService {
 
   async verifyEmail({ email, token }) {
     try {
-      const user = await UserRepository.exist({
+      const user = await this.userRepository.exist({
         field: 'email',
         value: email,
       });
 
       if (user) {
-        const existToken = await UcodeRepository.validateToken({
+        const existToken = await this.ucodeRepository.validateToken({
           email: email,
           token: token,
         });
@@ -545,7 +547,7 @@ export class AuthService {
           });
 
           // delete otp code
-          // await UcodeRepository.deleteToken({
+          // await this.ucodeRepository.deleteToken({
           //   email: email,
           //   token: token,
           // });
@@ -576,11 +578,11 @@ export class AuthService {
 
   async resendVerificationEmail(email: string) {
     try {
-      const user = await UserRepository.getUserByEmail(email);
+      const user = await this.userRepository.getUserByEmail(email);
 
       if (user) {
         // create otp code
-        const token = await UcodeRepository.createToken({
+        const token = await this.ucodeRepository.createToken({
           userId: user.id,
           isOtp: true,
         });
@@ -612,15 +614,15 @@ export class AuthService {
 
   async changePassword({ user_id, oldPassword, newPassword }) {
     try {
-      const user = await UserRepository.getUserDetails(user_id);
+      const user = await this.userRepository.getUserDetails(user_id);
 
       if (user) {
-        const _isValidPassword = await UserRepository.validatePassword({
+        const _isValidPassword = await this.userRepository.validatePassword({
           email: user.email,
           password: oldPassword,
         });
         if (_isValidPassword) {
-          await UserRepository.changePassword({
+          await this.userRepository.changePassword({
             email: user.email,
             password: newPassword,
           });
@@ -651,9 +653,9 @@ export class AuthService {
 
   async requestEmailChange(user_id: string, email: string) {
     try {
-      const user = await UserRepository.getUserDetails(user_id);
+      const user = await this.userRepository.getUserDetails(user_id);
       if (user) {
-        const token = await UcodeRepository.createToken({
+        const token = await this.ucodeRepository.createToken({
           userId: user.id,
           isOtp: true,
           email: email,
@@ -693,23 +695,23 @@ export class AuthService {
     token: string;
   }) {
     try {
-      const user = await UserRepository.getUserDetails(user_id);
+      const user = await this.userRepository.getUserDetails(user_id);
 
       if (user) {
-        const existToken = await UcodeRepository.validateToken({
+        const existToken = await this.ucodeRepository.validateToken({
           email: new_email,
           token: token,
           forEmailChange: true,
         });
 
         if (existToken) {
-          await UserRepository.changeEmail({
+          await this.userRepository.changeEmail({
             user_id: user.id,
             new_email: new_email,
           });
 
           // delete otp code
-          await UcodeRepository.deleteToken({
+          await this.ucodeRepository.deleteToken({
             email: new_email,
             token: token,
           });
@@ -741,7 +743,7 @@ export class AuthService {
   // --------- 2FA ---------
   async generate2FASecret(user_id: string) {
     try {
-      return await UserRepository.generate2FASecret(user_id);
+      return await this.userRepository.generate2FASecret(user_id);
     } catch (error) {
       return {
         success: false,
@@ -752,7 +754,7 @@ export class AuthService {
 
   async verify2FA(user_id: string, token: string) {
     try {
-      const isValid = await UserRepository.verify2FA(user_id, token);
+      const isValid = await this.userRepository.verify2FA(user_id, token);
       if (!isValid) {
         return {
           success: false,
@@ -773,9 +775,9 @@ export class AuthService {
 
   async enable2FA(user_id: string) {
     try {
-      const user = await UserRepository.getUserDetails(user_id);
+      const user = await this.userRepository.getUserDetails(user_id);
       if (user) {
-        await UserRepository.enable2FA(user_id);
+        await this.userRepository.enable2FA(user_id);
         return {
           success: true,
           message: '2FA enabled successfully',
@@ -796,9 +798,9 @@ export class AuthService {
 
   async disable2FA(user_id: string) {
     try {
-      const user = await UserRepository.getUserDetails(user_id);
+      const user = await this.userRepository.getUserDetails(user_id);
       if (user) {
-        await UserRepository.disable2FA(user_id);
+        await this.userRepository.disable2FA(user_id);
         return {
           success: true,
           message: '2FA disabled successfully',

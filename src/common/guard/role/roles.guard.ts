@@ -12,7 +12,10 @@ import { UserRepository } from '../../../common/repository/user/user.repository'
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+    private userRepository: UserRepository,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
@@ -25,9 +28,9 @@ export class RolesGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
-    
-    const userDetails = await UserRepository.getUserDetails(user.userId);
-    
+
+    const userDetails = await this.userRepository.getUserDetails(user.userId);
+
     if (!userDetails) {
       return false;
     }

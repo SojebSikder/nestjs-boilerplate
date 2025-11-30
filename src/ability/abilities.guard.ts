@@ -15,6 +15,7 @@ export class AbilitiesGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private abilityFacory: AbilityFactory,
+    private userRepository: UserRepository,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -23,7 +24,7 @@ export class AbilitiesGuard implements CanActivate {
       [];
 
     const req = context.switchToHttp().getRequest();
-    const userDetails = await UserRepository.getUserDetails(req.user.userId);
+    const userDetails = await this.userRepository.getUserDetails(req.user.userId);
 
     const ability = this.abilityFacory.defineAbility(userDetails);
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MessageStatus } from '@prisma/client';
+
 import appConfig from '../../../config/app.config';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -9,12 +9,15 @@ import { DateHelper } from '../../../common/helper/date.helper';
 import { MessageGateway } from './message.gateway';
 import { UserRepository } from '../../../common/repository/user/user.repository';
 import { Role } from '../../../common/guard/role/role.enum';
+import { MessageStatus } from 'prisma/generated/enums';
 
 @Injectable()
 export class MessageService {
   constructor(
     private prisma: PrismaService,
     private readonly messageGateway: MessageGateway,
+    private userRepository: UserRepository,
+    private chatRepository: ChatRepository,
   ) {}
 
   async create(user_id: string, createMessageDto: CreateMessageDto) {
@@ -108,7 +111,7 @@ export class MessageService {
     cursor?: string;
   }) {
     try {
-      const userDetails = await UserRepository.getUserDetails(user_id);
+      const userDetails = await this.userRepository.getUserDetails(user_id);
 
       const where_condition = {
         AND: [{ id: conversation_id }],
@@ -218,17 +221,17 @@ export class MessageService {
   }
 
   async updateMessageStatus(message_id: string, status: MessageStatus) {
-    return await ChatRepository.updateMessageStatus(message_id, status);
+    return await this.chatRepository.updateMessageStatus(message_id, status);
   }
 
   async readMessage(message_id: string) {
-    return await ChatRepository.updateMessageStatus(
+    return await this.chatRepository.updateMessageStatus(
       message_id,
       MessageStatus.READ,
     );
   }
 
   async updateUserStatus(user_id: string, status: string) {
-    return await ChatRepository.updateUserStatus(user_id, status);
+    return await this.chatRepository.updateUserStatus(user_id, status);
   }
 }

@@ -1,7 +1,7 @@
 import { AbilityBuilder, ExtractSubjectType, PureAbility } from '@casl/ability';
 import { createPrismaAbility, Subjects, PrismaQuery } from '@casl/prisma';
 import { Injectable } from '@nestjs/common';
-import { User, Role } from '@prisma/client';
+import { User, Role } from 'prisma/generated/client';
 
 export enum Action {
   Manage = 'manage', // wildcard for any action

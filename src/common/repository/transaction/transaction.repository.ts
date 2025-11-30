@@ -1,13 +1,14 @@
-import { PrismaClient } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
 
-const prisma = new PrismaClient();
-
+@Injectable()
 export class TransactionRepository {
+  constructor(private readonly prisma: PrismaService) {}
   /**
    * Create transaction
    * @returns
    */
-  static async createTransaction({
+  async createTransaction({
     booking_id,
     amount,
     currency,
@@ -36,7 +37,7 @@ export class TransactionRepository {
     if (status) {
       data['status'] = status;
     }
-    return await prisma.paymentTransaction.create({
+    return await this.prisma.paymentTransaction.create({
       data: {
         ...data,
       },
@@ -47,7 +48,7 @@ export class TransactionRepository {
    * Update transaction
    * @returns
    */
-  static async updateTransaction({
+  async updateTransaction({
     reference_number,
     status = 'pending',
     paid_amount,
@@ -79,7 +80,7 @@ export class TransactionRepository {
       order_data['payment_raw_status'] = raw_status;
     }
 
-    const paymentTransaction = await prisma.paymentTransaction.findMany({
+    const paymentTransaction = await this.prisma.paymentTransaction.findMany({
       where: {
         reference_number: reference_number,
       },
@@ -97,7 +98,7 @@ export class TransactionRepository {
     //   });
     // }
 
-    return await prisma.paymentTransaction.updateMany({
+    return await this.prisma.paymentTransaction.updateMany({
       where: {
         reference_number: reference_number,
       },

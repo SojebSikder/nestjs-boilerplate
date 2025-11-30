@@ -21,6 +21,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { PrometheusModule } from './prometheus/prometheus.module';
+import { RepositoryModule } from './common/repository/repository.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { PrometheusModule } from './prometheus/prometheus.module';
     // ]),
     // General modules
     PrismaModule,
+    RepositoryModule,
     AuthModule,
     AbilityModule,
     MailModule,

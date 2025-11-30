@@ -1,21 +1,23 @@
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
-import { PrismaClient } from '@prisma/client';
 import appConfig from '../../../config/app.config';
 import { ArrayHelper } from '../../helper/array.helper';
 import { Role } from '../../guard/role/role.enum';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
 
-const prisma = new PrismaClient();
 
+@Injectable()
 export class UserRepository {
+  constructor(private readonly prisma: PrismaService) {}
   /**
    * get user by email
    * @param email
    * @returns
    */
-  static async getUserByEmail(email: string) {
-    const user = await prisma.user.findFirst({
+  async getUserByEmail(email: string) {
+    const user = await this.prisma.user.findFirst({
       where: {
         email: email,
       },
@@ -24,8 +26,8 @@ export class UserRepository {
   }
 
   // email varification
-  static async verifyEmail({ email }) {
-    const user = await prisma.user.findFirst({
+  async verifyEmail({ email }) {
+    const user = await this.prisma.user.findFirst({
       where: {
         email: email,
       },
@@ -37,8 +39,8 @@ export class UserRepository {
    * get user details
    * @returns
    */
-  static async getUserDetails(userId: string) {
-    const user = await prisma.user.findFirst({
+  async getUserDetails(userId: string) {
+    const user = await this.prisma.user.findFirst({
       where: {
         id: userId,
       },
@@ -65,8 +67,8 @@ export class UserRepository {
    * Check existance
    * @returns
    */
-  static async exist({ field, value }) {
-    const model = await prisma.user.findFirst({
+  async exist({ field, value }) {
+    const model = await this.prisma.user.findFirst({
       where: {
         [field]: value,
       },
@@ -79,11 +81,11 @@ export class UserRepository {
    * @param param0
    * @returns
    */
-  static async createSuAdminUser({ username, email, password }) {
+  async createSuAdminUser({ username, email, password }) {
     try {
       password = await bcrypt.hash(password, appConfig().security.salt);
 
-      const user = await prisma.user.create({
+      const user = await this.prisma.user.create({
         data: {
           username: username,
           email: email,
@@ -102,7 +104,7 @@ export class UserRepository {
    * @param param0
    * @returns
    */
-  static async inviteUser({
+  async inviteUser({
     name,
     username,
     email,
@@ -114,7 +116,7 @@ export class UserRepository {
     role_id: string;
   }) {
     try {
-      const user = await prisma.user.create({
+      const user = await this.prisma.user.create({
         data: {
           name: name,
           username: username,
@@ -141,14 +143,14 @@ export class UserRepository {
    * @param param0
    * @returns
    */
-  static async attachRole({
+  async attachRole({
     user_id,
     role_id,
   }: {
     user_id: string;
     role_id: string;
   }) {
-    const role = await prisma.roleUser.create({
+    const role = await this.prisma.roleUser.create({
       data: {
         user_id: user_id,
         role_id: role_id,
@@ -162,14 +164,14 @@ export class UserRepository {
    * @param param0
    * @returns
    */
-  static async syncRole({
+  async syncRole({
     user_id,
     role_id,
   }: {
     user_id: string;
     role_id: string;
   }) {
-    const role = await prisma.roleUser.updateMany({
+    const role = await this.prisma.roleUser.updateMany({
       where: {
         AND: [
           {
@@ -189,7 +191,7 @@ export class UserRepository {
    * @param param0
    * @returns
    */
-  static async createUser({
+  async createUser({
     name,
     first_name,
     last_name,
@@ -224,7 +226,7 @@ export class UserRepository {
       }
       if (email) {
         // Check if email already exist
-        const userEmailExist = await UserRepository.exist({
+        const userEmailExist = await this.exist({
           field: 'email',
           value: String(email),
         });
@@ -253,7 +255,7 @@ export class UserRepository {
         // }
       }
 
-      const user = await prisma.user.create({
+      const user = await this.prisma.user.create({
         data: {
           ...data,
         },
@@ -292,7 +294,7 @@ export class UserRepository {
    * @param param0
    * @returns
    */
-  static async updateUser(
+  async updateUser(
     user_id: string,
     {
       name,
@@ -315,7 +317,7 @@ export class UserRepository {
       }
       if (email) {
         // Check if email already exist
-        const userEmailExist = await UserRepository.exist({
+        const userEmailExist = await this.exist({
           field: 'email',
           value: String(email),
         });
@@ -344,7 +346,7 @@ export class UserRepository {
         };
       }
 
-      const existUser = await prisma.user.findFirst({
+      const existUser = await this.prisma.user.findFirst({
         where: {
           id: user_id,
         },
@@ -357,7 +359,7 @@ export class UserRepository {
         };
       }
 
-      const user = await prisma.user.update({
+      const user = await this.prisma.user.update({
         where: {
           id: user_id,
         },
@@ -399,10 +401,10 @@ export class UserRepository {
    * @param param0
    * @returns
    */
-  static async deleteUser(user_id: string) {
+  async deleteUser(user_id: string) {
     try {
       // check if user exist
-      const existUser = await prisma.user.findFirst({
+      const existUser = await this.prisma.user.findFirst({
         where: {
           id: user_id,
         },
@@ -414,7 +416,7 @@ export class UserRepository {
         };
       }
 
-      await prisma.user.delete({
+      await this.prisma.user.delete({
         where: {
           id: user_id,
         },
@@ -432,7 +434,7 @@ export class UserRepository {
   }
 
   // change password
-  static async changePassword({
+  async changePassword({
     email,
     password,
   }: {
@@ -441,7 +443,7 @@ export class UserRepository {
   }) {
     try {
       password = await bcrypt.hash(password, appConfig().security.salt);
-      const user = await prisma.user.update({
+      const user = await this.prisma.user.update({
         where: {
           email: email,
         },
@@ -456,7 +458,7 @@ export class UserRepository {
   }
 
   // change email
-  static async changeEmail({
+  async changeEmail({
     user_id,
     new_email,
   }: {
@@ -464,7 +466,7 @@ export class UserRepository {
     new_email: string;
   }) {
     try {
-      const user = await prisma.user.update({
+      const user = await this.prisma.user.update({
         where: {
           id: user_id,
         },
@@ -479,14 +481,14 @@ export class UserRepository {
   }
 
   // validate password
-  static async validatePassword({
+  async validatePassword({
     email,
     password,
   }: {
     email: string;
     password: string;
   }) {
-    const user = await prisma.user.findFirst({
+    const user = await this.prisma.user.findFirst({
       where: {
         email: email,
       },
@@ -500,9 +502,9 @@ export class UserRepository {
   }
 
   // convert user type to admin/vendor
-  static async convertTo(user_id: string, type: string = 'vendor') {
+  async convertTo(user_id: string, type: string = 'vendor') {
     try {
-      const userDetails = await UserRepository.getUserDetails(user_id);
+      const userDetails = await this.getUserDetails(user_id);
       if (!userDetails) {
         return {
           success: false,
@@ -515,7 +517,7 @@ export class UserRepository {
           message: 'User is already a vendor',
         };
       }
-      await prisma.user.update({
+      await this.prisma.user.update({
         where: { id: user_id },
         data: { type: type },
       });
@@ -533,8 +535,8 @@ export class UserRepository {
   }
 
   // generate two factor secret
-  static async generate2FASecret(user_id: string) {
-    const user = await prisma.user.findFirst({
+  async generate2FASecret(user_id: string) {
+    const user = await this.prisma.user.findFirst({
       where: { id: user_id },
     });
 
@@ -546,7 +548,7 @@ export class UserRepository {
     }
 
     const secret = speakeasy.generateSecret();
-    await prisma.user.update({
+    await this.prisma.user.update({
       where: { id: user_id },
       data: { two_factor_secret: secret.base32 },
     });
@@ -566,8 +568,8 @@ export class UserRepository {
   }
 
   // verify two factor
-  static async verify2FA(user_id: string, token: string): Promise<boolean> {
-    const user = await prisma.user.findUnique({ where: { id: user_id } });
+  async verify2FA(user_id: string, token: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: user_id } });
 
     if (!user || !user.two_factor_secret) return false;
 
@@ -581,8 +583,8 @@ export class UserRepository {
   }
 
   // enable two factor
-  static async enable2FA(user_id: string) {
-    const user = await prisma.user.update({
+  async enable2FA(user_id: string) {
+    const user = await this.prisma.user.update({
       where: { id: user_id },
       data: { is_two_factor_enabled: 1 },
     });
@@ -590,8 +592,8 @@ export class UserRepository {
   }
 
   // disable two factor
-  static async disable2FA(user_id: string) {
-    const user = await prisma.user.update({
+  async disable2FA(user_id: string) {
+    const user = await this.prisma.user.update({
       where: { id: user_id },
       data: { is_two_factor_enabled: 0, two_factor_secret: null },
     });

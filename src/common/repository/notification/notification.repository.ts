@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
+@Injectable()
 export class NotificationRepository {
+  constructor(private readonly prisma: PrismaService) {}
   /**
    * Create a notification
    * @param sender_id - The ID of the user who fired the event
@@ -12,7 +12,7 @@ export class NotificationRepository {
    * @param entity_id - The ID of the entity related to the notification
    * @returns The created notification
    */
-  static async createNotification({
+  async createNotification({
     sender_id,
     receiver_id,
     text,
@@ -39,7 +39,7 @@ export class NotificationRepository {
     if (text) {
       notificationEventData['text'] = text;
     }
-    const notificationEvent = await prisma.notificationEvent.create({
+    const notificationEvent = await this.prisma.notificationEvent.create({
       data: {
         type: type,
         text: text,
@@ -58,7 +58,7 @@ export class NotificationRepository {
       notificationData['entity_id'] = entity_id;
     }
 
-    const notification = await prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         notification_event_id: notificationEvent.id,
         ...notificationData,

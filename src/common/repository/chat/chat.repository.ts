@@ -1,15 +1,18 @@
-import { PrismaClient, MessageStatus } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
 
-const prisma = new PrismaClient();
+import { PrismaService } from '../../../prisma/prisma.service';
+import { MessageStatus } from 'prisma/generated/enums';
 
+@Injectable()
 export class ChatRepository {
+  constructor(private readonly prisma: PrismaService) {}
   /**
    * Update message status
    * @returns
    */
-  static async updateMessageStatus(message_id: string, status: MessageStatus) {
+  async updateMessageStatus(message_id: string, status: MessageStatus) {
     // if message exist
-    const message = await prisma.message.findFirst({
+    const message = await this.prisma.message.findFirst({
       where: {
         id: message_id,
       },
@@ -19,7 +22,7 @@ export class ChatRepository {
       return;
     }
 
-    await prisma.message.update({
+    await this.prisma.message.update({
       where: {
         id: message_id,
       },
@@ -33,9 +36,9 @@ export class ChatRepository {
    * Update user status
    * @returns
    */
-  static async updateUserStatus(user_id: string, status: string) {
+  async updateUserStatus(user_id: string, status: string) {
     // if user exist
-    const user = await prisma.user.findFirst({
+    const user = await this.prisma.user.findFirst({
       where: {
         id: user_id,
       },
@@ -44,7 +47,7 @@ export class ChatRepository {
     if (!user) {
       return;
     }
-    return await prisma.user.update({
+    return await this.prisma.user.update({
       where: { id: user_id },
       data: {
         availability: status,
