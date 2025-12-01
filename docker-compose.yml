@@ -51,6 +51,31 @@ services:
     ports:
       - "6379:6379"
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    environment:
+      - PROMETHEUS_STORAGE_LOCAL_PATH=/prometheus
+    depends_on:
+      - redis
+      - postgres
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # Set the admin password here
+    depends_on:
+      - prometheus
+    restart: always
+
   turnserver:
     image: coturn/coturn
     container_name: turnserver
@@ -68,3 +93,4 @@ services:
 
 volumes:
   postgres_data:
+  prometheus_data:
