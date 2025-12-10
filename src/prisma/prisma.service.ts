@@ -1,4 +1,3 @@
-// external imports
 import {
   Logger,
   Injectable,
@@ -6,31 +5,39 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
-// internal imports
 import appConfig from '../config/app.config';
 import { PrismaClient } from 'prisma/generated/client';
 
-const connectionString = appConfig().database.url;
 @Injectable()
 export class PrismaService
-extends PrismaClient
+  extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  private readonly logger = new Logger(PrismaService.name);
+
   constructor() {
+    const connectionString = appConfig().database.url;
+    
+    if (!connectionString) {
+      throw new Error('DATABASE_URL is not defined in environment variables');
+    }
+
     const adapter = new PrismaPg({ connectionString });
     super({ adapter });
 
-    // comment out this when seeding data using command line
     if (process.env.PRISMA_ENV == '1') {
-      console.log('Prisma Middleware not called', process.env.PRISMA_ENV);
-    } else {
-      // use middleware here
-      // this.$use(SoftdeleteMiddleware);
+      this.logger.log('Prisma Middleware disabled');
     }
   }
 
   async onModuleInit() {
-    await this.$connect();
+    try {
+      await this.$connect();
+      this.logger.log('Prisma connected successfully');
+    } catch (error) {
+      this.logger.error('Failed to connect to database', error);
+      throw error;
+    }
   }
 
   async onModuleDestroy() {
