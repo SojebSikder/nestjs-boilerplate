@@ -28,7 +28,7 @@ export default () => ({
   },
 
   database: {
-    url: process.env.DATABASE_URL,
+    url: String(process.env.DATABASE_URL),
   },
 
   redis: {
